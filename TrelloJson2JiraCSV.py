@@ -50,7 +50,7 @@ def AddCheckListAsSubTasks(checkListIDs, parentID):
 			if checkListName != 'Checklist':
 				summary = checkListName + " - " + summary
 
-			AddIssue("Sub-Task", "", parentID, status, resolution, summary, "", "", "", None)
+			AddIssue("Sub-Task", "", parentID, status, resolution, summary,"", "", "", "", "", None, None)
 
 # End the csv row with a simple newline
 def EndCSVLine():
@@ -58,13 +58,15 @@ def EndCSVLine():
 	csvData += "\n"
 
 # Take all the information for an issue and convert it into a csv line
-def AddIssue(issuetype, IssueID, ParentID, Status, resolution, summary, description, attachments, component, labels):
+def AddIssue(issuetype, IssueID, ParentID, Status, resolution, summary, dateCreated, dateModified, description, attachments, component, labels, comments):
 	AddCSVItem(issuetype)
 	AddCSVItem(IssueID)
 	AddCSVItem(ParentID)
 	AddCSVItem(Status)
 	AddCSVItem(resolution)
 	AddCSVItem(summary)
+	AddCSVItem(dateCreated)
+	AddCSVItem(dateModified)
 	AddCSVItem(description)
 	AddCSVItem(component)
 
@@ -91,6 +93,19 @@ def AddIssue(issuetype, IssueID, ParentID, Status, resolution, summary, descript
 	for i in range(numLabels, maxLabels):
 		AddCSVItem("")
 
+
+	numComments = len(comments) if comments != None else 0
+	if numComments > numComments:
+		print "\tError! - {0} comments found in \"{1}\". Comments will be skipped, only {1} will be handled. Update header line and maxComments value".format(numLabels, summary, maxLabels)
+		return 1
+
+	for i in range(numComments):
+		comment = comments[i]
+		AddCSVItem("{0};{1};{2};".format(comment["date"], comment["memberCreator"]["fullName"], comment["data"]["text"]))
+	for i in range(numComments, maxComments):
+		AddCSVItem("")
+
+
 	EndCSVLine()
 
 # Set up the parser for options
@@ -112,9 +127,10 @@ listDict 		= {}
 checklistDict 	= {}
 checklistNames 	= {}
 csvData 		= ""
-maxLabels 		= 8
-maxAttachments  = 3
-headerLine 		= "issuetype, Issue ID, Parent ID, Status, Resolution, summary, description, component" + (", attachment" * maxAttachments) + (", label" * maxLabels) + "\n"
+maxLabels 		= 10
+maxAttachments  = 10
+maxComments		= 30
+headerLine 		= "issuetype, Issue ID, Parent ID, Status, Resolution, summary, dateCreated, dateModified, description, component" + (", attachment" * maxAttachments) + (", label" * maxLabels) + (", comment" * maxComments) + "\n"
 
 print "Loading " + jsonPath
 
@@ -143,11 +159,13 @@ for card in data["cards"]:
 	# Grab all the core data we'll need from the card
 	issueID 	= card["id"]
 	cardName 	= card["name"].rstrip()
+	dateModified= card["dateLastActivity"].rstrip()
 	shortURL 	= card["shortUrl"].strip()
 	cardDesc 	= card["desc"].rstrip()
 	labels 		= card["labels"]
 	listName 	= listDict[card["idList"]]
 	attachments = card["attachments"]
+	comments	= []
 	status 		= "To Do"
 	component 	= ""
 
@@ -166,7 +184,18 @@ for card in data["cards"]:
 	else:
 		cardDesc = "Generated from: " + shortURL
 
-	AddIssue("task", issueID, "", status, resolution, cardName, cardDesc, attachments, component, labels)
+	# Find comments
+	for action in data["actions"]:
+		if action["type"] == "commentCard":
+			if action["data"]["card"]["id"] == issueID :
+				comments.append(action)
+				print "Comment: {0}, by ({1})".format(action["data"]["text"], action["memberCreator"]["fullName"])
+		elif action["type"] == "createCard":
+			if action["data"]["card"]["id"] == issueID :
+				dateCreated = action["date"]
+
+
+	AddIssue("task", issueID, "", status, resolution, cardName, dateCreated, dateModified, cardDesc, attachments, component, labels, comments)
 
 	AddCheckListAsSubTasks(card["idChecklists"], issueID)
 
