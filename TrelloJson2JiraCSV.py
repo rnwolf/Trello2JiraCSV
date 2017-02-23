@@ -101,7 +101,7 @@ def AddIssue(issuetype, IssueID, ParentID, Status, resolution, summary, dateCrea
 
 	for i in range(numComments):
 		comment = comments[i]
-		AddCSVItem("{0};{1};{2};".format(comment["date"], comment["memberCreator"]["fullName"], comment["data"]["text"]))
+		AddCSVItem("{0};{1};{2} ({3}): {4};".format(comment["date"], comment["memberCreator"]["fullName"], comment["memberCreator"]["fullName"], comment["memberCreator"]["username"] , comment["data"]["text"]))
 	for i in range(numComments, maxComments):
 		AddCSVItem("")
 
