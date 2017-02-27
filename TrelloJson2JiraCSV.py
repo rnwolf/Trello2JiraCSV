@@ -198,7 +198,7 @@ for card in data["cards"]:
 		component = card["labels"][0]["name"]
 		cardDesc = "Labels: "
 		for label in card["labels"]:
-			cardDesc += card["desc"].rstrip() + ", "
+			cardDesc += label["name"].rstrip() + ", "
 	else:
 		cardDesc = "Labels: empty\n\n"
 
