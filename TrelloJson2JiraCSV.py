@@ -23,6 +23,9 @@
 # SOFTWARE.
 
 import sys
+reload(sys)
+sys.setdefaultencoding('utf-8')
+
 import json
 import optparse
 
@@ -50,15 +53,29 @@ def AddCheckListAsSubTasks(checkListIDs, parentID):
 			if checkListName != 'Checklist':
 				summary = checkListName + " - " + summary
 
-			AddIssue("Sub-Task", "", parentID, status, resolution, summary,"", "", "", "", "", None, None)
+			AddIssue("Sub-Task", "", parentID, status, reporter, asignee, resolution, summary,"", "", "", "", "", None, None)
+			# def AddIssue(issuetype, IssueID, ParentID, Status, reporter, asignee, resolution, summary,
+			# dateCreated, dateModified, description, attachments, component, labels, comments):
 
 # End the csv row with a simple newline
 def EndCSVLine():
 	global csvData
 	csvData += "\n"
 
+def NickNameToUser(nickname):
+	global nickNamesMap
+	if nickNamesMap.get(nickname):
+		return nickNamesMap.get(nickname)
+	else:
+		return nickname
+
 # Take all the information for an issue and convert it into a csv line
-def AddIssue(issuetype, IssueID, ParentID, Status, resolution, summary, dateCreated, dateModified, description, attachments, component, labels, comments):
+def AddIssue(issuetype, IssueID, ParentID, Status, reporter, asignee, resolution, summary, dateCreated, dateModified, description, attachments, component, labels, comments):
+
+## headerLine
+## = "issuetype, Issue ID, Parent ID, Status, Resolution, summary, dateCreated, dateModified, description,
+## component" + (", attachment" * maxAttachments) + (", label" * maxLabels) + (", comment" * maxComments) + "\n"
+
 	AddCSVItem(issuetype)
 	AddCSVItem(IssueID)
 	AddCSVItem(ParentID)
@@ -101,7 +118,7 @@ def AddIssue(issuetype, IssueID, ParentID, Status, resolution, summary, dateCrea
 
 	for i in range(numComments):
 		comment = comments[i]
-		AddCSVItem("{0};{1};{2} ({3}): {4};".format(comment["date"], comment["memberCreator"]["fullName"], comment["memberCreator"]["fullName"], comment["memberCreator"]["username"] , comment["data"]["text"]))
+		AddCSVItem("{0};{1};{2} ({3}): {4};".format(comment["date"], NickNameToUser(comment["memberCreator"]["username"]), comment["memberCreator"]["fullName"], comment["memberCreator"]["username"] , comment["data"]["text"]))
 	for i in range(numComments, maxComments):
 		AddCSVItem("")
 
@@ -113,6 +130,7 @@ parser = optparse.OptionParser(version='TrelloJson2JiraCSV v1.0.0')
 
 parser.add_option('-j', '--json'        , dest="jsonPath"   	, action="store"         , help="The path to the trello json file")
 parser.add_option('--list_as_component' , dest="listAsComp"    	, action="store_true"    , help="Use the list as a component in Jira rather than setting it as a status", default=False)
+parser.add_option('--usernames'			, dest="usersFile"		, action="store"		 , help="Provide the username mapping", default=False);
 
 (opts, args) = parser.parse_args()
 
@@ -131,6 +149,10 @@ maxLabels 		= 10
 maxAttachments  = 10
 maxComments		= 30
 headerLine 		= "issuetype, Issue ID, Parent ID, Status, Resolution, summary, dateCreated, dateModified, description, component" + (", attachment" * maxAttachments) + (", label" * maxLabels) + (", comment" * maxComments) + "\n"
+nickNamesMap 	= {}
+if opts.usersFile:
+	with open(opts.usersFile) as nickNamesMap:
+		nickNamesMap = json.load(nickNamesMap)
 
 print "Loading " + jsonPath
 
@@ -160,20 +182,36 @@ for card in data["cards"]:
 	issueID 	= card["id"]
 	cardName 	= card["name"].rstrip()
 	dateModified= card["dateLastActivity"].rstrip()
+	dateCreated = dateModified
 	shortURL 	= card["shortUrl"].strip()
-	cardDesc 	= card["desc"].rstrip()
 	labels 		= card["labels"]
 	listName 	= listDict[card["idList"]]
 	attachments = card["attachments"]
 	comments	= []
 	status 		= "To Do"
 	component 	= ""
+	reporter 	= ""
+
+
+
+	if  len(card["labels"]):
+		component = card["labels"][0]["name"]
+		cardDesc = "Labels: "
+		for label in card["labels"]:
+			cardDesc += card["desc"].rstrip() + ", "
+	else:
+		cardDesc = "Labels: empty\n\n"
+
 
 	# We'll use the list name as the status of component depending on user input
 	if opts.listAsComp:
 		component = listName
 	else:
 		status 	  = listName
+
+
+	if card["closed"] == True:
+		status = "Archived"
 
 	# Set resolution up value if we can
 	resolution = "Done" if status == "Done" else ""
@@ -184,18 +222,23 @@ for card in data["cards"]:
 	else:
 		cardDesc = "Generated from: " + shortURL
 
+
 	# Find comments
 	for action in data["actions"]:
 		if action["type"] == "commentCard":
 			if action["data"]["card"]["id"] == issueID :
 				comments.append(action)
-				print "Comment: {0}, by ({1})".format(action["data"]["text"], action["memberCreator"]["fullName"])
 		elif action["type"] == "createCard":
 			if action["data"]["card"]["id"] == issueID :
 				dateCreated = action["date"]
+				memberCreator = NickNameToUser(action["memberCreator"]["username"])
+
+	asignee = ""
 
 
-	AddIssue("task", issueID, "", status, resolution, cardName, dateCreated, dateModified, cardDesc, attachments, component, labels, comments)
+	AddIssue("task", issueID, "", status, reporter, asignee, resolution, cardName, dateCreated, dateModified, cardDesc, attachments, component, labels, comments)
+	# def AddIssue(issuetype, IssueID, ParentID, Status, reporter, asignee, resolution, summary,
+	# dateCreated, dateModified, description, attachments, component, labels, comments):
 
 	AddCheckListAsSubTasks(card["idChecklists"], issueID)
 
