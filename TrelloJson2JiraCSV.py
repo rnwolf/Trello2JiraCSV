@@ -113,7 +113,7 @@ def AddIssue(issuetype, IssueID, ParentID, Status, reporter, asignee, resolution
 
 	numComments = len(comments) if comments != None else 0
 	if numComments > numComments:
-		print "\tError! - {0} comments found in \"{1}\". Comments will be skipped, only {1} will be handled. Update header line and maxComments value".format(numLabels, summary, maxLabels)
+		print(f"\tError! - {numLabels} comments found in \"{summary}\". Comments will be skipped, only {maxLabels} will be handled. Update header line and maxComments value")
 		return 1
 
 	for i in range(numComments):
