@@ -33,7 +33,7 @@ import optparse
 # Will re-encode to utf8 and wrap quotes around text that contains quotes
 def AddCSVItem(str):
 	global csvData
-	finalStr = str.encode("utf8")
+	finalStr = str #.encode("utf8")
 	finalStr = finalStr.replace("\"", "\"\"")
 	csvData += "\"{0}\",".format(finalStr)
 
@@ -90,7 +90,7 @@ def AddIssue(issuetype, IssueID, ParentID, Status, reporter, asignee, resolution
 	# Handle attachments
 	numAttachments = len(attachments) if attachments != None else 0
 	if numAttachments > maxAttachments:
-		print "\tError! - {0} Attachments found in \"{1}\". Card will be skipped, only {2} will be handled. Update header line and maxAttachments value".format(numAttachments, summary, maxAttachments)
+		print(f"\tError! - {numAttachments} Attachments found in \"{summary}\". Card will be skipped, only {maxAttachments} will be handled. Update header line and maxAttachments value")
 		return 1
 
 	for i in range(numAttachments):
@@ -100,7 +100,7 @@ def AddIssue(issuetype, IssueID, ParentID, Status, reporter, asignee, resolution
 
 	numLabels = len(labels) if labels != None else 0
 	if numLabels > maxLabels:
-		print "\tError! - {0} labels found in \"{1}\". Card will be skipped, only {1} will be handled. Update header line and maxLabels value".format(numLabels, summary, maxLabels)
+		print(f"\tError! - {numLabels} labels found in \"{summary}\". Card will be skipped, only {maxLabels} will be handled. Update header line and maxLabels value")
 		return 1
 
 	for i in range(numLabels):
@@ -154,7 +154,7 @@ if opts.usersFile:
 	with open(opts.usersFile) as nickNamesMap:
 		nickNamesMap = json.load(nickNamesMap)
 
-print "Loading " + jsonPath
+print("Loading " + jsonPath)
 
 # Load json data
 with open(jsonPath) as data_file:
@@ -170,11 +170,11 @@ for checkList in data["checklists"]:
 	checklistNames[checkList["id"]] = checkList["name"]
 
 # Dump some useful information about the board
-print "Trello Board: {0} ({1})".format(data["name"], data["url"])
-print "\t{0} lists found".format(len(data["lists"]))
-print "\t{0} cards found".format(len(data["cards"]))
-print "\t{0} checklists found".format(len(data["checklists"]))
-print "\t{0} labels found".format(len(data["labels"]))
+print("Trello Board: {0} ({1})".format(data["name"], data["url"]))
+print("\t{0} lists found".format(len(data["lists"])))
+print("\t{0} cards found".format(len(data["cards"])))
+print("\t{0} checklists found".format(len(data["checklists"])))
+print("\t{0} labels found".format(len(data["labels"])))
 
 # Core loop
 for card in data["cards"]:
@@ -246,4 +246,4 @@ for card in data["cards"]:
 with open(csvPath, "w") as csvFile:
 	csvFile.write(headerLine)
 	csvFile.write(csvData)
-	print "\tData written to {0}".format(csvPath)
+	print(f"\tData written to {csvPath}")
